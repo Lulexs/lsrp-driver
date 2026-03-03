@@ -1,11 +1,22 @@
 package main
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
+	"lsrp-driver/msg_types"
 	"net"
 )
+
+func sendMessage(conn net.Conn, byteArray []byte, message msg_types.Message) error {
+	fmt.Printf("Sending %v with content %v\n", message.GetDisplayName(), byteArray)
+
+	n, err := conn.Write(byteArray)
+	if err != nil || n != len(byteArray) {
+		fmt.Printf("Failed to send %v\n", message.GetDisplayName())
+		return err
+	}
+	fmt.Printf("Successfully sent %v\n", message.GetDisplayName())
+	return nil
+}
 
 func main() {
 
@@ -15,58 +26,25 @@ func main() {
 		panic(err)
 	}
 
-	startupMessage := buildStartupMessage()
-	fmt.Println("Startup message: ", startupMessage)
-	n, err := conn.Write(startupMessage)
-
-	if err != nil {
-		fmt.Println("Failed to send startup message")
-		return
-	}
-	fmt.Printf("Successfully sent %v bytes\n", n)
-
-	recvBuffer := make([]byte, 1024)
-	n, err = conn.Read(recvBuffer)
-	if err != nil {
-		fmt.Println("Failed to receive response to startup message")
-		return
-	}
-	fmt.Printf("Received %v bytes\n", n)
-	fmt.Println(recvBuffer[:n])
-
-}
-
-func writeParams(writer *bytes.Buffer, keyValueMap map[string]string) {
-	for key, value := range keyValueMap {
-		writer.WriteString(key)
-		writer.WriteByte(0)
-		writer.WriteString(value)
-		writer.WriteByte(0)
-	}
-}
-
-func buildStartupMessage() []byte {
-
-	params := map[string]string{
+	startupMsg := &msg_types.StartUpMessage{}
+	content := startupMsg.BuildMessageContent(map[string]string{
 		"username": "postgres",
 		"database": "postgres",
+	})
+
+	err = sendMessage(conn, content, startupMsg)
+	if err != nil {
+		conn.Close()
 	}
 
-	var majorVer uint16 = 3
-	var minorVer uint16 = 2
+	recvBuffer := make([]byte, 1)
+	n, err := conn.Read(recvBuffer)
+	if err != nil {
+		fmt.Println("Failed to receive any response")
+		return
+	}
 
-	byteArray := make([]byte, 8)
-	buf := bytes.NewBuffer(byteArray)
-
-	binary.BigEndian.PutUint32(byteArray[0:4], 0)
-	binary.BigEndian.PutUint16(byteArray[4:6], majorVer)
-	binary.BigEndian.PutUint16(byteArray[6:8], minorVer)
-
-	writeParams(buf, params)
-	buf.WriteByte(0)
-
-	binary.BigEndian.PutUint32(byteArray[0:4], uint32(len(byteArray)))
-
-	return byteArray
+	fmt.Printf("Received %v bytes\n", n)
+	fmt.Println(recvBuffer[:n])
 
 }
