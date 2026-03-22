@@ -6,3 +6,13 @@ type Message interface {
 	GetNextPossibleMessages() []Message
 	GetDisplayName() string
 }
+
+type OutgoingMessage interface {
+	BuildMessageContent() []byte
+	Message
+}
+
+type MessageData struct {
+	MapData  map[string]string
+	ListData []string
+}

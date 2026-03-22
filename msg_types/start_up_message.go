@@ -39,14 +39,21 @@ func (msg *StartUpMessage) GetDisplayName() string {
 	return "StartUpMessage"
 }
 
-func (msg *StartUpMessage) BuildMessageContent(params map[string]string) []byte {
+func (msg *StartUpMessage) BuildMessageContent() []byte {
+	return msg.buildMessageContent(MessageData{MapData: map[string]string{
+		"user":     "postgres",
+		"database": "postgres",
+	}})
+}
+
+func (msg *StartUpMessage) buildMessageContent(data MessageData) []byte {
 	var majorVer uint16 = 3
 	var minorVer uint16 = 2
 
 	buf := new(bytes.Buffer)
 	buf.Write(make([]byte, 8))
 
-	writeParams(buf, params)
+	writeMapParams(buf, data.MapData)
 	buf.WriteByte(0)
 
 	byteArray := buf.Bytes()

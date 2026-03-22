@@ -26,7 +26,7 @@ func receiveMessage(conn net.Conn) (byte, []byte, error) {
 		return 0, nil, err
 	}
 	msgLen := binary.BigEndian.Uint32(recvBuffer[1:5])
-	restBuffer := make([]byte, msgLen)
+	restBuffer := make([]byte, msgLen-4)
 	n, err := conn.Read(restBuffer)
 	if err != nil || msgLen-4 != uint32(n) {
 		return 0, nil, err
@@ -43,26 +43,40 @@ func main() {
 		panic(err)
 	}
 
-	startupMsg := &msg_types.StartUpMessage{}
-	content := startupMsg.BuildMessageContent(map[string]string{
-		"username": "postgres",
-		"database": "postgres",
-	})
+	var outgoingMsg msg_types.Message = &msg_types.StartUpMessage{}
+	content := outgoingMsg.(msg_types.OutgoingMessage).BuildMessageContent()
 
-	err = sendMessage(conn, content, startupMsg)
-	if err != nil {
-		conn.Close()
-	}
+	for {
+		err = sendMessage(conn, content, outgoingMsg)
+		if err != nil {
+			conn.Close()
+		}
 
-	firstByte, restBuffer, err := receiveMessage(conn)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+		firstByte, restBuffer, err := receiveMessage(conn)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 
-	for _, msg := range startupMsg.GetNextPossibleMessages() {
-		if msg.IsResponseMessageOfMessageType(firstByte, restBuffer) {
-			fmt.Println(msg.GetDisplayName())
+		for _, msg := range outgoingMsg.GetNextPossibleMessages() {
+			if msg.IsResponseMessageOfMessageType(firstByte, restBuffer) {
+				fmt.Printf("Received %v with content %v\n", msg.GetDisplayName(), restBuffer)
+				if errResponse, ok := msg.(*msg_types.ErrorResponse); ok {
+					errResponse.PrintError(restBuffer)
+					conn.Close()
+					return
+				} else {
+					possibleResponses := msg.GetNextPossibleMessages()
+					if len(possibleResponses) != 1 {
+						panic("Found 0 or more than 1 possible response to message")
+					} else if _, ok := possibleResponses[0].(msg_types.OutgoingMessage); !ok {
+						panic("Found impossible outgoing message type")
+					}
+					outgoingMsg = possibleResponses[0]
+					content = possibleResponses[0].(msg_types.OutgoingMessage).BuildMessageContent()
+				}
+				break
+			}
 		}
 	}
 
