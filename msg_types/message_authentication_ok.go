@@ -13,7 +13,7 @@ func (msg AuthenticationOk) GetFirstByte() byte {
 }
 
 func (msg AuthenticationOk) IsResponseMessageOfMessageType(firstByte byte, msgBytes []byte) bool {
-	return isAuthType(firstByte, msgBytes, msg.GetFirstByte(), 3)
+	return isAuthType(firstByte, msgBytes, msg.GetFirstByte(), 0)
 }
 
 func (msg AuthenticationOk) GetNextPossibleMessages() []Message {

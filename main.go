@@ -58,6 +58,7 @@ func main() {
 			return
 		}
 
+		found := false
 		for _, msg := range outgoingMsg.GetNextPossibleMessages() {
 			if msg.IsResponseMessageOfMessageType(firstByte, restBuffer) {
 				fmt.Printf("Received %v with content %v\n", msg.GetDisplayName(), restBuffer)
@@ -65,18 +66,25 @@ func main() {
 					errResponse.PrintError(restBuffer)
 					conn.Close()
 					return
-				} else {
-					possibleResponses := msg.GetNextPossibleMessages()
-					if len(possibleResponses) != 1 {
-						panic("Found 0 or more than 1 possible response to message")
-					} else if _, ok := possibleResponses[0].(msg_types.OutgoingMessage); !ok {
-						panic("Found impossible outgoing message type")
-					}
-					outgoingMsg = possibleResponses[0]
-					content = possibleResponses[0].(msg_types.OutgoingMessage).BuildMessageContent()
 				}
+				
+				possibleResponses := msg.GetNextPossibleMessages()
+				if len(possibleResponses) != 1 {
+					panic("Found 0 or more than 1 possible response to message")
+				} else if _, ok := possibleResponses[0].(msg_types.OutgoingMessage); !ok {
+					panic("Found impossible outgoing message type")
+				}
+				outgoingMsg = possibleResponses[0]
+				content = possibleResponses[0].(msg_types.OutgoingMessage).BuildMessageContent()
+
+				found = true
 				break
 			}
+		}
+
+		if !found {
+			panic("Unexpected message arrived from server")
+
 		}
 	}
 
