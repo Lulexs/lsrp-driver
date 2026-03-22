@@ -1,7 +1,6 @@
 package msg_types
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/binary"
 	"sync"
@@ -14,8 +13,8 @@ type StartUpMessage struct {
 	once sync.Once
 }
 
-func (msg *StartUpMessage) IsResponseMessageOfMessageType(reader *bufio.Reader) (bool, error) {
-	return false, nil
+func (msg *StartUpMessage) IsResponseMessageOfMessageType(firstByte byte, msgBytes []byte) bool {
+	return false
 }
 
 func (msg *StartUpMessage) GetFirstByte() byte {

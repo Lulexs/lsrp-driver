@@ -1,7 +1,5 @@
 package msg_types
 
-import "bufio"
-
 type AuthenticationClearTextPassword struct {
 	MessageTypeNode
 }
@@ -14,8 +12,8 @@ func (msg AuthenticationClearTextPassword) GetFirstByte() byte {
 	return 'R'
 }
 
-func (msg AuthenticationClearTextPassword) IsResponseMessageOfMessageType(reader *bufio.Reader) (bool, error) {
-	return isAuthType(reader, msg.GetFirstByte(), 3)
+func (msg AuthenticationClearTextPassword) IsResponseMessageOfMessageType(firstByte byte, msgBytes []byte) bool {
+	return isAuthType(firstByte, msgBytes, msg.GetFirstByte(), 3)
 }
 
 func (msg AuthenticationClearTextPassword) GetNextPossibleMessages() []Message {
